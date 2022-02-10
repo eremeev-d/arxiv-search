@@ -101,12 +101,42 @@ class SearchEngine:
         words = self.tokenize(query)
         if len(words) == 0:
             return []
-        if not (words[0] in self.inv_index):
-            return []
-        article_idx = self.inv_index[words[0]]
-        for word in words[1:]:
-            if not (word in self.inv_index):
-                return []
-            article_idx = article_idx.intersection(self.inv_index[word])
-        articles = list(map(lambda article_id: self.articles_dict[article_id], article_idx))
-        return articles[:1000]
+        words = list(set(words)) # delete duplicates
+        articles = []
+        candidate_lists = []
+        for word in words:
+            candidate_lists.append(list(self.inv_index[word]))
+        num_words = len(words)
+        cursor = [0]*num_words
+        while True: # TODO remove while-true
+            # Check if some cursor out of range
+            exit_flag = False
+            for i in range(num_words):
+                if cursor[i] >= len(candidate_lists[i]):
+                    exit_flag = True
+                    break
+            if exit_flag:
+                break
+            # Check if all cursors point at the same object
+            obj = candidate_lists[0][cursor[0]]
+            same_object = True
+            for i in range(num_words):
+                if candidate_lists[i][cursor[i]] != obj:
+                    same_object = False
+                    break
+            # If all cursors point at the same object, add it to articles
+            if same_object:
+                articles.append(obj)
+                for i in range(num_words):
+                    cursor[i] += 1
+            # Otherwise find minimal object and update it
+            else:
+                minimal_object = candidate_lists[0][cursor[0]]
+                for i in range(num_words):
+                    minimal_object = min(minimal_object, candidate_lists[i][cursor[i]])
+                for i in range(num_words):
+                    if candidate_lists[i][cursor[i]] == minimal_object:
+                        cursor[i] += 1
+
+        articles = list(map(lambda article_id: self.articles_dict[article_id], articles))
+        return articles
