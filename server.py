@@ -14,7 +14,7 @@ def index():
     if query is None:
         query = ''
     documents = search_engine.retrieve(query)
-    documents = sorted(documents, key=lambda doc: -search_engine.score(query, doc))[:10] # TODO: подобрать чиселку
+    documents = sorted(documents, key=lambda doc: -search_engine.score(query, doc))[:10]
     results = [doc.format(query)+['%.2f' % search_engine.score(query, doc)] for doc in documents] 
     return render_template(
         'index.html',
