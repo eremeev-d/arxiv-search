@@ -5,6 +5,8 @@ import json
 import string
 import multiprocessing as mp
 from multiprocessing.dummy import Pool as ThreadPool
+import pickle
+from sklearn.metrics.pairwise import cosine_similarity
 
 
 class Article:
@@ -30,8 +32,9 @@ class SearchEngine:
         nltk.download('punkt')
         nltk.download('omw-1.4')
         nltk.download('averaged_perceptron_tagger')
-        # TODO: TF-IDF !!!!
-
+        with open('Data/tf-idf-vectorizer', 'rb') as f:
+            self.tf_idf = pickle.load(f)
+        
     def get_wordnet_pos(self, treebank_tag):
         my_switch = {
             'J': wordnet.ADJ,
@@ -88,13 +91,11 @@ class SearchEngine:
     def score(self, query, article):
         # возвращает какой-то скор для пары запрос-документ
         # больше -- релевантнее
-        # TODO: TF-IDF !!!!
-        query_tokens = self.tokenize(query)
-        abstract_tokens = self.tokenize(article.abstract)
-        score = 0
-        for word in query_tokens:
-            score += abstract_tokens.count(word)
-        return score
+        query = self.tokenize(query)
+        article = self.tokenize(article.abstract)
+        query = self.tf_idf.transform([' '.join(query)])
+        article = self.tf_idf.transform([' '.join(article)])
+        return cosine_similarity(query, article).sum()
 
     def retrieve(self, query):
         # возвращает начальный список релевантных документов
@@ -105,6 +106,8 @@ class SearchEngine:
         articles = []
         candidate_lists = []
         for word in words:
+            if not (word in self.inv_index):
+                return []
             candidate_lists.append(list(self.inv_index[word]))
         num_words = len(words)
         cursor = [0]*num_words
